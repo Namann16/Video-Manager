@@ -43,7 +43,7 @@ const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
 
     try {
-        const authRes = await fetch("/api/auth/imagekit-auth");
+        const authRes = await fetch("/api/imagekit-auth");
         if (!authRes.ok) {
             throw new Error("Failed to fetch authentication data");
         }
@@ -54,7 +54,7 @@ const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
             fileName: file.name,
             publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY || "",
             signature: auth.signature,
-            expire: auth.expires,
+            expire: auth.expire,
             token: auth.token,
 
             onProgress: (event) => {

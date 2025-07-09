@@ -2,30 +2,52 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if(!MONGODB_URI) {
-    throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+if (!MONGODB_URI) {
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
-let cached = global.mongoose
-if(!cached) {
-    cached = global.mongoose = { conn: null, promise: null };
+declare global {
+  var mongooseCache: {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+  } | undefined;
 }
+
+// Initialize cache if not already present
+const cached = (global.mongooseCache ??= {
+  conn: null,
+  promise: null,
+});
 
 export async function connectToDatabase() {
-    if(cached.conn) {
-        return cached.conn;
-    }
-    if(!cached.promise) {
-        mongoose.connect(MONGODB_URI!)
-        .then(() => mongoose.connection)
-    }
+  if (cached.conn) return cached.conn;
 
-    try {
-        const conn = await cached.promise
-    } catch (error) {
-        cached.promise = null;
-        throw error;
-    }
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI as string, {
+      dbName: "videoapp",
+      bufferCommands: false,
+    });
+  }
 
-    return cached.conn;;
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    throw err;
+  }
+
+  return cached.conn;
+}
+
+export async function disconnectFromDatabase() {
+  if (cached.conn) {
+    await mongoose.connection.close();
+    cached.conn = null;
+    cached.promise = null;
+  }
+}
+export async function clearDatabase() {
+  if (cached.conn) {
+    await mongoose.connection.dropDatabase();
+  }
 }

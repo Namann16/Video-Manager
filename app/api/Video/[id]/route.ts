@@ -1,17 +1,21 @@
-export const dynamic = "force-dynamic";
 import { connectToDatabase } from "@/lib/db";
 import Video from "@/models/videos.models";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectToDatabase();
-    const videos = await Video.find().sort({ createdAt: -1 });
-    return NextResponse.json(videos, { status: 200 });
+    const video = await Video.findById(params.id);
+
+    if (!video) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(video, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch video" }, { status: 500 });
   }
 }
 
@@ -41,26 +45,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const data = await req.json();
     await connectToDatabase();
-    const body = await req.json();
 
-    const { title, description, videoUrl, thumbnailUrl } = body;
-
-    if (!title || !description || !videoUrl || !thumbnailUrl) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
-
-    const video = await Video.create({
-      title,
-      description,
-      videoUrl,
-      thumbnailUrl,
-      uploadedBy: session.user?.email,
+    const newVideo = new Video({
+      ...data,
+      userId: session.user.id,
+      createdAt: new Date(),
     });
 
-    return NextResponse.json(video, { status: 201 });
+    const savedVideo = await newVideo.save();
+    return NextResponse.json(savedVideo, { status: 201 });
   } catch (error) {
-    console.error("POST /api/video error:", error);
-    return NextResponse.json({ error: "Failed to upload video" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create video" }, { status: 500 });
   }
 }

@@ -39,5 +39,5 @@ const vdeoSchema = new Schema<IVideo> (
     }
 )
 
-const Video = models?.Video || model<IVideo>("Video", vdeoSchema);
+const Video = models.Video || model<IVideo>("Video", vdeoSchema);
 export default Video;
